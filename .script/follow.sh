@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Set user camera follow the robot in ignition-gazebo
 

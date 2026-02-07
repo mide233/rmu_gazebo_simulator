@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Start ign simulation
 source install/setup.sh
