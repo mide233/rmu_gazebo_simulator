@@ -1,5 +1,11 @@
 FROM ros:humble-ros-base
 
+ARG USERNAME=cvdoc
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN if id -u $USER_UID ; then userdel `id -un $USER_UID` ; fi
+
 RUN sudo apt update && \
     sudo apt install python3-pip curl wget htop vim lsb-release gnupg -y && \
     sudo pip install vcstool2 xmacro
@@ -18,30 +24,35 @@ RUN curl -sSL https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/
     apt-get update && \
     apt-get install -y ignition-fortress
 
-# create workspace
-RUN mkdir -p ~/ros_ws && \
-    cd ~/ros_ws && \
-    git clone https://github.com/SMBU-PolarBear-Robotics-Team/rmu_gazebo_simulator.git src/rmu_gazebo_simulator && \
-    vcs import --recursive src < src/rmu_gazebo_simulator/dependencies.repos
-
-WORKDIR /root/ros_ws
-
-# install dependencies and some tools
-RUN rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
-
-# build
-RUN . /opt/ros/$ROS_DISTRO/setup.sh && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=release
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    # [Optional] Add sudo support. Omit if you don't need to install software after connecting.
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # setup .zshrc
 RUN echo 'export TERM=xterm-256color\n\
-source ~/ros_ws/install/setup.zsh\n\
-eval "$(register-python-argcomplete3 ros2)"\n\
-eval "$(register-python-argcomplete3 colcon)"\n'\
->> /root/.zshrc
+    eval "$(register-python-argcomplete3 ros2)"\n\
+    eval "$(register-python-argcomplete3 colcon)"\n'\
+    >> /home/$USERNAME/.zshrc
+RUN echo 'export PATH=$PATH:/home/ws/.script' >> /home/$USERNAME/.zshrc
+RUN echo 'alias wsi="source /opt/ros/humble/setup.zsh"' >> /home/$USERNAME/.zshrc
+RUN echo 'alias ini="source install/setup.zsh"' >> /home/$USERNAME/.zshrc
 
-# source entrypoint setup
-RUN sed --in-place --expression \
-      '$isource "/root/ros_ws/install/setup.bash"' \
-      /ros_entrypoint.sh
+USER $USERNAME
 
-RUN rm -rf /var/lib/apt/lists/*
+# install dependencies and some tools
+RUN --mount=type=bind,target=/home/ws,source=.,readonly=false cd /home/ws \
+    && rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
+
+# build
+# RUN . /opt/ros/$ROS_DISTRO/setup.sh && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=release
+
+# # source entrypoint setup
+# RUN sed --in-place --expression \
+#     '$isource "/root/ros_ws/install/setup.bash"' \
+#     /ros_entrypoint.sh
+
+# RUN rm -rf /var/lib/apt/lists/*
