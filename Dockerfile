@@ -24,7 +24,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
 RUN sudo apt update && sudo apt install wget python3-pip curl htop vim lsb-release gnupg -y && \
     sudo pip install vcstool2 xmacro
 
-RUN sudo apt install ros-humble-cv-bridge
+RUN sudo apt install -y ros-humble-cv-bridge
 
 # Add Gazebo package repository and install Ignition Fortress
 RUN curl -sSL https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg && \
