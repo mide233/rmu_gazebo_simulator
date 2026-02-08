@@ -1,5 +1,5 @@
 {
-    "name": "navATRM",
+    "name": "simATRM",
     "privileged": true,
     "remoteUser": "cvdoc",
     "build": {
